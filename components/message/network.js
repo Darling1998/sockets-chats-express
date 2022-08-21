@@ -1,48 +1,45 @@
 const express = require('express');
-const response = require('./../../network/response');
+const response= require('../../network/response');
 const controller = require('./controller');
+const router = express.Router();
 
+router.get('/',function(req,res){
+    const filterMessages = req.query.user || null;
 
-const router = express.Router();//tener interaccion con las rutas get-post,etc
-var app = express();
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({extended: false}));
-app.use(router);
-
-router.get('/message',function(req,res){
-    console.log(req.headers)
-   // res.send('hola desde get');
-   // res.send('Lista de mensajes');
-   response.success(req,res,'Lista de mensajes');
+    controller.getMessages(filterMessages).then((messageList)=>{
+        response.success(req,res,messageList,200);
+      }).catch(e=>{
+        response.error(req,res,'Unexpected Error');
+      })
 });
 
-router.post('/message',function(req,res){
-    //console.log(req.query);//para los datos que viene en la urñ con el ?
-    //console.log(req.body);
-   // res.send('Mensaje añadido');
-    //res.status(201).send({error:'',body:'mensaje eliminado'})
-    if(req.query.error == "ok"){
-        response.error(req,res,'Error Simulado',500,'Es solo una simulacion de los errores');
-    }else{
-        response.success(req,res,'Creado correctamente',201);
-    }
-  
-});
-
-app.use('/app',express.static('public'))
-
-router.delete('/',function(req,res){
-    console.log(req.query);//para los datos que viene en la urñ con el ?
-    console.log(req.body);
-    res.send('Mensaje eliminado');
-  
+router.post('/',function(req,res){
+    controller.addMessage(req.body.user, req.body.message).
+    then((fullMessage)=>{
+        response.success(req,res,fullMessage,201);
+    }).catch(e=>{
+        response.error(req,res,'Informacion Inavlida',500,e);
+    });
 });
 
 
-/* app.use('/',function(req,res){
-    res.send('hola');
+router.patch('/:id', async(req, res)=> {
+    await controller.updateMessage(req.params.id, req.body.message)
+    .then((data) => {
+      response.success(req, res, data, 200);
+    })
+    .catch(e => {
+      response.error((req, res, 'Error interno', 500, e));
+    });
+  });
 
+  router.delete('/:id', function(req, res) {
+    controller.deleteMessage(req.params.id)
+        .then(() => {
+            response.success(req, res, `Mensaje ${req.params.id} eliminado`, 200);
+        })
+        .catch(e => {
+            response.error(req, res, 'Error interno', 500, e);
+        });
 });
- */
-app.listen(3000);
-console.log('aplicacion corriendo');
+module.exports=router;
